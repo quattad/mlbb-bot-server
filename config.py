@@ -22,15 +22,23 @@ def load_config(env_path: str = ".env") -> Config:
 
     required = ["TELEGRAM_BOT_TOKEN", "ANTHROPIC_API_KEY", "MLBB_API_TOKEN", "WEBHOOK_URL"]
     for var in required:
-        if not os.environ.get(var):
+        if var not in os.environ:
             raise ValueError(f"Missing required environment variable: {var}")
+        if not os.environ[var].strip():
+            raise ValueError(f"Environment variable {var} is set but empty")
+
+    port_str = os.environ.get("WEBHOOK_PORT", "8443")
+    try:
+        webhook_port_val = int(port_str)
+    except ValueError:
+        raise ValueError(f"WEBHOOK_PORT must be an integer, got: {port_str!r}")
 
     return Config(
         telegram_bot_token=os.environ["TELEGRAM_BOT_TOKEN"],
         anthropic_api_key=os.environ["ANTHROPIC_API_KEY"],
         mlbb_api_token=os.environ["MLBB_API_TOKEN"],
         webhook_url=os.environ["WEBHOOK_URL"],
-        webhook_port=int(os.environ.get("WEBHOOK_PORT", "8443")),
+        webhook_port=webhook_port_val,
         agent_backend=os.environ.get("AGENT_BACKEND", "claude"),
     )
 
