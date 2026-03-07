@@ -61,7 +61,7 @@ class TestSuggestCountersHandler:
         await handler_fn(update, context)
 
         reply_text = update.effective_message.reply_html.call_args[0][0]
-        assert "usage" in reply_text.lower() or "Usage" in reply_text
+        assert "usage" in reply_text.lower()
 
     async def test_agent_error_sends_error_message(self, tmp_path):
         skill_file = tmp_path / "suggest_counters.md"
@@ -78,7 +78,7 @@ class TestSuggestCountersHandler:
         await handler_fn(update, context)
 
         reply_text = update.effective_message.reply_html.call_args[0][0]
-        assert "unavailable" in reply_text.lower() or "error" in reply_text.lower()
+        assert "unavailable" in reply_text.lower()
 
 
 class TestBuildHandlers:
