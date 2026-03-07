@@ -63,6 +63,20 @@ class TestSuggestCountersHandler:
         reply_text = update.effective_message.reply_html.call_args[0][0]
         assert "usage" in reply_text.lower()
 
+    async def test_multi_word_hero_names_are_preserved(self, tmp_path):
+        skill_file = tmp_path / "suggest_counters.md"
+        skill_file.write_text("Analyze: {heroes}")
+
+        agent = FakeAgent()
+        handler_fn = suggest_counters_handler(agent, str(skill_file))
+        # Args as Telegram would parse "/suggest_counters Sun Wukong, Lancelot"
+        update, context = _make_update_and_context(["Sun", "Wukong,", "Lancelot"])
+
+        await handler_fn(update, context)
+
+        assert "Sun Wukong" in agent.last_prompt
+        assert "Lancelot" in agent.last_prompt
+
     async def test_agent_error_sends_error_message(self, tmp_path):
         skill_file = tmp_path / "suggest_counters.md"
         skill_file.write_text("{heroes}")

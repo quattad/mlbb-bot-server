@@ -31,8 +31,8 @@ def suggest_counters_handler(
             )
             return
 
-        heroes = " ".join(args).replace(",", " ").strip()
-        heroes = ", ".join(h.strip() for h in heroes.split() if h.strip())
+        raw = " ".join(args)
+        heroes = ", ".join(h.strip() for h in raw.split(",") if h.strip())
 
         try:
             prompt = load_skill(skill_path, heroes=heroes)

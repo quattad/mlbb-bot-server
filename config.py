@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from dotenv import load_dotenv
+
+_PROJECT_ROOT = Path(__file__).parent
 
 
 @dataclass(frozen=True)
@@ -45,7 +48,7 @@ def load_config(env_path: str = ".env") -> Config:
 
 COMMANDS: dict[str, dict] = {
     "/suggest_counters": {
-        "skill_file": "skills/suggest_counters.md",
+        "skill_file": str(_PROJECT_ROOT / "skills" / "suggest_counters.md"),
         "description": "Suggest counter heroes for an enemy lineup",
         "args": ["heroes"],
     }

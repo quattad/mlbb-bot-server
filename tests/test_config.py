@@ -103,7 +103,7 @@ class TestCommandRegistry:
 
     def test_suggest_counters_has_skill_file(self):
         cmd = COMMANDS["/suggest_counters"]
-        assert cmd["skill_file"] == "skills/suggest_counters.md"
+        assert cmd["skill_file"].endswith("skills/suggest_counters.md")
 
     def test_suggest_counters_has_description(self):
         cmd = COMMANDS["/suggest_counters"]

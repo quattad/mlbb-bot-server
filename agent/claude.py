@@ -53,6 +53,8 @@ class ClaudeAgentClient(AgentClient):
             model=self.model,
             max_turns=self.max_turns,
             max_budget_usd=self.max_budget_usd,
+            permission_mode="bypassPermissions",
+            allow_dangerously_skip_permissions=True,
             system_prompt=system_prompt,
             env={
                 "ANTHROPIC_API_KEY": self.anthropic_api_key,

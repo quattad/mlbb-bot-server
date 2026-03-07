@@ -100,6 +100,28 @@ class TestClaudeAgentClient:
 
         assert result == ""
 
+    async def test_run_sets_permission_bypass(self):
+        client = ClaudeAgentClient(
+            anthropic_api_key="test-key",
+            mlbb_api_token="test-mlbb",
+            mcp_server_module="mlbb_mcp.server",
+        )
+
+        mock_result_msg = MagicMock()
+        mock_result_msg.result = "ok"
+        captured_options = {}
+
+        async def fake_query(*args, **kwargs):
+            captured_options.update(kwargs)
+            yield mock_result_msg
+
+        with patch("agent.claude.query", side_effect=fake_query):
+            await client.run("test")
+
+        opts = captured_options["options"]
+        assert opts.permission_mode == "bypassPermissions"
+        assert opts.allow_dangerously_skip_permissions is True
+
     async def test_run_sets_env_with_api_keys(self):
         client = ClaudeAgentClient(
             anthropic_api_key="test-key",
