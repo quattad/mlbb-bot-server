@@ -176,28 +176,28 @@ class TestLoadConfig:
 
 
 class TestCommandRegistry:
-    def test_suggest_counters_command_exists(self):
+    def test_team_counter_command_exists(self):
         from config import COMMANDS
 
-        assert "/suggest_counters" in COMMANDS
+        assert "/team_counter" in COMMANDS
 
-    def test_suggest_counters_has_skill_file(self):
+    def test_team_counter_has_skill_file(self):
         from config import COMMANDS
 
-        cmd = COMMANDS["/suggest_counters"]
-        assert cmd["skill_file"] == "skills/suggest_counters.md"
+        cmd = COMMANDS["/team_counter"]
+        assert cmd["skill_file"] == "skills/team-counter/SKILL.md"
 
-    def test_suggest_counters_has_description(self):
+    def test_team_counter_has_description(self):
         from config import COMMANDS
 
-        cmd = COMMANDS["/suggest_counters"]
+        cmd = COMMANDS["/team_counter"]
         assert "description" in cmd
         assert len(cmd["description"]) > 0
 
-    def test_suggest_counters_has_args(self):
+    def test_team_counter_has_args(self):
         from config import COMMANDS
 
-        cmd = COMMANDS["/suggest_counters"]
+        cmd = COMMANDS["/team_counter"]
         assert cmd["args"] == ["heroes"]
 ```
 
@@ -249,8 +249,8 @@ def load_config(env_path: str = ".env") -> Config:
 
 
 COMMANDS: dict[str, dict] = {
-    "/suggest_counters": {
-        "skill_file": "skills/suggest_counters.md",
+    "/team_counter": {
+        "skill_file": "skills/team-counter/SKILL.md",
         "description": "Suggest counter heroes for an enemy lineup",
         "args": ["heroes"],
     }
@@ -563,7 +563,7 @@ git commit -m "feat: add Claude Agent SDK implementation of AgentClient"
 ### Task 5: Skill Template Loading
 
 **Files:**
-- Create: `skills/suggest_counters.md`
+- Create: `skills/team-counter/SKILL.md`
 - Create: `tests/test_skills.py`
 - Create: `bot/skills.py`
 
@@ -624,7 +624,7 @@ def load_skill(skill_path: str, **kwargs: str) -> str:
 **Step 4: Create the actual skill template**
 
 ```markdown
-# skills/suggest_counters.md
+# skills/team-counter/SKILL.md
 
 Analyze the following enemy team lineup in Mobile Legends: Bang Bang and suggest the best counter heroes.
 
@@ -664,8 +664,8 @@ Expected: All PASS, 100% coverage on `bot/skills.py`
 **Step 6: Commit**
 
 ```bash
-git add bot/skills.py skills/suggest_counters.md tests/test_skills.py
-git commit -m "feat: add skill template loading and suggest_counters skill"
+git add bot/skills.py skills/team-counter/SKILL.md tests/test_skills.py
+git commit -m "feat: add skill template loading and team_counter skill"
 ```
 
 ---
@@ -682,7 +682,7 @@ git commit -m "feat: add skill template loading and suggest_counters skill"
 # tests/test_handlers.py
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from bot.handlers import suggest_counters_handler, build_handlers
+from bot.handlers import team_counter_handler, build_handlers
 from agent.base import AgentClient
 
 
@@ -713,14 +713,14 @@ class FakeAgent(AgentClient):
 class TestSuggestCountersHandler:
     @pytest.mark.asyncio
     async def test_sends_agent_response_as_html(self, tmp_path):
-        skill_file = tmp_path / "suggest_counters.md"
+        skill_file = tmp_path / "team_counter.md"
         skill_file.write_text("Counter: {heroes}")
 
         agent = FakeAgent(response="<b>Pick Fanny</b>")
 
-        handler_fn = suggest_counters_handler(agent, str(skill_file))
+        handler_fn = team_counter_handler(agent, str(skill_file))
         update, context = _make_update_and_context(
-            "/suggest_counters Lancelot, Pharsa"
+            "/team_counter Lancelot, Pharsa"
         )
         # Provide raw text args
         context.args = ["Lancelot,", "Pharsa"]
@@ -731,14 +731,14 @@ class TestSuggestCountersHandler:
 
     @pytest.mark.asyncio
     async def test_passes_heroes_to_skill_template(self, tmp_path):
-        skill_file = tmp_path / "suggest_counters.md"
+        skill_file = tmp_path / "team_counter.md"
         skill_file.write_text("Analyze: {heroes}")
 
         agent = FakeAgent()
 
-        handler_fn = suggest_counters_handler(agent, str(skill_file))
+        handler_fn = team_counter_handler(agent, str(skill_file))
         update, context = _make_update_and_context(
-            "/suggest_counters Lancelot, Pharsa"
+            "/team_counter Lancelot, Pharsa"
         )
         context.args = ["Lancelot,", "Pharsa"]
 
@@ -748,13 +748,13 @@ class TestSuggestCountersHandler:
 
     @pytest.mark.asyncio
     async def test_missing_args_sends_usage(self, tmp_path):
-        skill_file = tmp_path / "suggest_counters.md"
+        skill_file = tmp_path / "team_counter.md"
         skill_file.write_text("{heroes}")
 
         agent = FakeAgent()
 
-        handler_fn = suggest_counters_handler(agent, str(skill_file))
-        update, context = _make_update_and_context("/suggest_counters")
+        handler_fn = team_counter_handler(agent, str(skill_file))
+        update, context = _make_update_and_context("/team_counter")
         context.args = []
 
         await handler_fn(update, context)
@@ -764,7 +764,7 @@ class TestSuggestCountersHandler:
 
     @pytest.mark.asyncio
     async def test_agent_error_sends_error_message(self, tmp_path):
-        skill_file = tmp_path / "suggest_counters.md"
+        skill_file = tmp_path / "team_counter.md"
         skill_file.write_text("{heroes}")
 
         class FailingAgent(AgentClient):
@@ -773,8 +773,8 @@ class TestSuggestCountersHandler:
 
         agent = FailingAgent()
 
-        handler_fn = suggest_counters_handler(agent, str(skill_file))
-        update, context = _make_update_and_context("/suggest_counters Lancelot")
+        handler_fn = team_counter_handler(agent, str(skill_file))
+        update, context = _make_update_and_context("/team_counter Lancelot")
         context.args = ["Lancelot"]
 
         await handler_fn(update, context)
@@ -785,12 +785,12 @@ class TestSuggestCountersHandler:
 
 class TestBuildHandlers:
     def test_returns_list_of_command_handler_tuples(self, tmp_path):
-        skill_file = tmp_path / "suggest_counters.md"
+        skill_file = tmp_path / "team_counter.md"
         skill_file.write_text("{heroes}")
 
         agent = FakeAgent()
         commands = {
-            "/suggest_counters": {
+            "/team_counter": {
                 "skill_file": str(skill_file),
                 "description": "Suggest counters",
                 "args": ["heroes"],
@@ -801,7 +801,7 @@ class TestBuildHandlers:
         assert len(handlers) == 1
 
         name, handler_fn = handlers[0]
-        assert name == "suggest_counters"
+        assert name == "team_counter"
         assert callable(handler_fn)
 ```
 
@@ -833,7 +833,7 @@ HandlerFunc = Callable[
 ]
 
 
-def suggest_counters_handler(
+def team_counter_handler(
     agent: AgentClient, skill_path: str
 ) -> HandlerFunc:
     async def handler(
@@ -842,7 +842,7 @@ def suggest_counters_handler(
         args = context.args or []
         if not args:
             await update.effective_message.reply_html(
-                "Usage: /suggest_counters Hero1, Hero2, Hero3, Hero4, Hero5"
+                "Usage: /team_counter Hero1, Hero2, Hero3, Hero4, Hero5"
             )
             return
 
@@ -855,7 +855,7 @@ def suggest_counters_handler(
             result = await agent.run(prompt)
             await update.effective_message.reply_html(result)
         except Exception:
-            logger.exception("Agent error in /suggest_counters")
+            logger.exception("Agent error in /team_counter")
             await update.effective_message.reply_html(
                 "Sorry, the service is temporarily unavailable. Please try again later."
             )
@@ -867,7 +867,7 @@ def build_handlers(
     agent: AgentClient, commands: dict[str, dict]
 ) -> list[tuple[str, HandlerFunc]]:
     handler_map: dict[str, Callable[..., HandlerFunc]] = {
-        "/suggest_counters": suggest_counters_handler,
+        "/team_counter": team_counter_handler,
     }
 
     handlers = []
@@ -968,7 +968,7 @@ class TestCreateApp:
             mock_builder.build.return_value = MagicMock()
 
             mock_handler_fn = MagicMock()
-            mock_build.return_value = [("suggest_counters", mock_handler_fn)]
+            mock_build.return_value = [("team_counter", mock_handler_fn)]
 
             app = create_app(cfg)
 
@@ -1121,7 +1121,7 @@ git commit -m "chore: ensure 100% test coverage"
 
 **Files:**
 - Verify: `.env.example` is up to date
-- Verify: `skills/suggest_counters.md` exists
+- Verify: `skills/team-counter/SKILL.md` exists
 
 **Step 1: Verify `.env.example` has all required variables**
 
@@ -1130,7 +1130,7 @@ Expected: Contains all 6 env vars from design doc
 
 **Step 2: Verify skill template exists**
 
-Run: `cat skills/suggest_counters.md`
+Run: `cat skills/team-counter/SKILL.md`
 Expected: Contains the prompt template with `{heroes}` placeholder
 
 **Step 3: Final full test run**

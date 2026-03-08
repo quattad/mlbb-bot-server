@@ -1,7 +1,7 @@
 # tests/test_handlers.py
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from bot.handlers import suggest_counters_handler, build_handlers
+from bot.handlers import team_counter_handler, build_handlers
 from agent.base import AgentClient
 
 
@@ -24,13 +24,13 @@ class FakeAgent(AgentClient):
         return self.response
 
 
-class TestSuggestCountersHandler:
+class TestTeamCounterHandler:
     async def test_sends_agent_response_as_html(self, tmp_path):
-        skill_file = tmp_path / "suggest_counters.md"
+        skill_file = tmp_path / "team_counter.md"
         skill_file.write_text("Counter: {heroes}")
 
         agent = FakeAgent(response="<b>Pick Fanny</b>")
-        handler_fn = suggest_counters_handler(agent, str(skill_file))
+        handler_fn = team_counter_handler(agent, str(skill_file))
         update, context = _make_update_and_context(["Lancelot,", "Pharsa"])
 
         await handler_fn(update, context)
@@ -38,11 +38,11 @@ class TestSuggestCountersHandler:
         update.effective_message.reply_html.assert_called_once_with("<b>Pick Fanny</b>")
 
     async def test_passes_heroes_to_skill_template(self, tmp_path):
-        skill_file = tmp_path / "suggest_counters.md"
+        skill_file = tmp_path / "team_counter.md"
         skill_file.write_text("Analyze: {heroes}")
 
         agent = FakeAgent()
-        handler_fn = suggest_counters_handler(agent, str(skill_file))
+        handler_fn = team_counter_handler(agent, str(skill_file))
         update, context = _make_update_and_context(["Lancelot,", "Pharsa"])
 
         await handler_fn(update, context)
@@ -51,11 +51,11 @@ class TestSuggestCountersHandler:
         assert "Pharsa" in agent.last_prompt
 
     async def test_missing_args_sends_usage(self, tmp_path):
-        skill_file = tmp_path / "suggest_counters.md"
+        skill_file = tmp_path / "team_counter.md"
         skill_file.write_text("{heroes}")
 
         agent = FakeAgent()
-        handler_fn = suggest_counters_handler(agent, str(skill_file))
+        handler_fn = team_counter_handler(agent, str(skill_file))
         update, context = _make_update_and_context([])
 
         await handler_fn(update, context)
@@ -64,12 +64,12 @@ class TestSuggestCountersHandler:
         assert "usage" in reply_text.lower()
 
     async def test_multi_word_hero_names_are_preserved(self, tmp_path):
-        skill_file = tmp_path / "suggest_counters.md"
+        skill_file = tmp_path / "team_counter.md"
         skill_file.write_text("Analyze: {heroes}")
 
         agent = FakeAgent()
-        handler_fn = suggest_counters_handler(agent, str(skill_file))
-        # Args as Telegram would parse "/suggest_counters Sun Wukong, Lancelot"
+        handler_fn = team_counter_handler(agent, str(skill_file))
+        # Args as Telegram would parse "/team_counter Sun Wukong, Lancelot"
         update, context = _make_update_and_context(["Sun", "Wukong,", "Lancelot"])
 
         await handler_fn(update, context)
@@ -78,7 +78,7 @@ class TestSuggestCountersHandler:
         assert "Lancelot" in agent.last_prompt
 
     async def test_agent_error_sends_error_message(self, tmp_path):
-        skill_file = tmp_path / "suggest_counters.md"
+        skill_file = tmp_path / "team_counter.md"
         skill_file.write_text("{heroes}")
 
         class FailingAgent(AgentClient):
@@ -86,7 +86,7 @@ class TestSuggestCountersHandler:
                 raise RuntimeError("agent down")
 
         agent = FailingAgent()
-        handler_fn = suggest_counters_handler(agent, str(skill_file))
+        handler_fn = team_counter_handler(agent, str(skill_file))
         update, context = _make_update_and_context(["Lancelot"])
 
         await handler_fn(update, context)
@@ -97,12 +97,12 @@ class TestSuggestCountersHandler:
 
 class TestBuildHandlers:
     def test_returns_list_of_command_handler_tuples(self, tmp_path):
-        skill_file = tmp_path / "suggest_counters.md"
+        skill_file = tmp_path / "team_counter.md"
         skill_file.write_text("{heroes}")
 
         agent = FakeAgent()
         commands = {
-            "/suggest_counters": {
+            "/team_counter": {
                 "skill_file": str(skill_file),
                 "description": "Suggest counters",
                 "args": ["heroes"],
@@ -113,7 +113,7 @@ class TestBuildHandlers:
         assert len(handlers) == 1
 
         name, handler_fn = handlers[0]
-        assert name == "suggest_counters"
+        assert name == "team_counter"
         assert callable(handler_fn)
 
     def test_unknown_command_is_skipped(self, tmp_path):

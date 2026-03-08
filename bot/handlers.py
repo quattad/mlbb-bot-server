@@ -18,7 +18,7 @@ HandlerFunc = Callable[
 ]
 
 
-def suggest_counters_handler(
+def team_counter_handler(
     agent: AgentClient, skill_path: str
 ) -> HandlerFunc:
     async def handler(
@@ -27,7 +27,7 @@ def suggest_counters_handler(
         args = context.args or []
         if not args:
             await update.effective_message.reply_html(
-                "Usage: /suggest_counters Hero1, Hero2, Hero3, Hero4, Hero5"
+                "Usage: /team_counter Hero1, Hero2, Hero3, Hero4, Hero5"
             )
             return
 
@@ -39,7 +39,7 @@ def suggest_counters_handler(
             result = await agent.run(prompt)
             await update.effective_message.reply_html(result)
         except Exception:
-            logger.exception("Agent error in /suggest_counters")
+            logger.exception("Agent error in /team_counter")
             await update.effective_message.reply_html(
                 "Sorry, the service is temporarily unavailable. Please try again later."
             )
@@ -51,7 +51,7 @@ def build_handlers(
     agent: AgentClient, commands: dict[str, dict]
 ) -> list[tuple[str, HandlerFunc]]:
     handler_map: dict[str, Callable[..., HandlerFunc]] = {
-        "/suggest_counters": suggest_counters_handler,
+        "/team_counter": team_counter_handler,
     }
 
     handlers = []

@@ -49,18 +49,18 @@ class TestLoadConfig:
 
 
 class TestCommandRegistry:
-    def test_suggest_counters_command_exists(self):
-        assert "/suggest_counters" in COMMANDS
+    def test_team_counter_command_exists(self):
+        assert "/team_counter" in COMMANDS
 
-    def test_suggest_counters_has_skill_file(self):
-        cmd = COMMANDS["/suggest_counters"]
-        assert cmd["skill_file"].endswith("skills/suggest_counters.md")
+    def test_team_counter_has_skill_file(self):
+        cmd = COMMANDS["/team_counter"]
+        assert cmd["skill_file"].endswith("skills/team-counter/SKILL.md")
 
-    def test_suggest_counters_has_description(self):
-        cmd = COMMANDS["/suggest_counters"]
+    def test_team_counter_has_description(self):
+        cmd = COMMANDS["/team_counter"]
         assert "description" in cmd
         assert len(cmd["description"]) > 0
 
-    def test_suggest_counters_has_args(self):
-        cmd = COMMANDS["/suggest_counters"]
+    def test_team_counter_has_args(self):
+        cmd = COMMANDS["/team_counter"]
         assert cmd["args"] == ["heroes"]

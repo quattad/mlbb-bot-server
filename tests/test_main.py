@@ -47,7 +47,7 @@ class TestCreateApp:
             mock_builder.build.return_value = MagicMock()
 
             mock_handler_fn = MagicMock()
-            mock_build.return_value = [("suggest_counters", mock_handler_fn)]
+            mock_build.return_value = [("team_counter", mock_handler_fn)]
 
             from bot.main import create_app
             app = create_app(cfg)

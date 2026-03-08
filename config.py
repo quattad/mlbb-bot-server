@@ -33,8 +33,8 @@ def load_config(env_path: str = ".env") -> Config:
 
 
 COMMANDS: dict[str, dict] = {
-    "/suggest_counters": {
-        "skill_file": str(_PROJECT_ROOT / "skills" / "suggest_counters.md"),
+    "/team_counter": {
+        "skill_file": str(_PROJECT_ROOT / "skills" / "team-counter" / "SKILL.md"),
         "description": "Suggest counter heroes for an enemy lineup",
         "args": ["heroes"],
     }

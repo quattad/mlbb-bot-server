@@ -1,6 +1,6 @@
 ---
-name: suggest-counters
-description: Analyzes the hero lineup provided by the user and suggest counter heroes that the user can choose for the team. Should be executed when the user input contains '/suggest-counters', 'Suggest counter heroes...'
+name: team-counter
+description: Analyzes the hero lineup provided by the user and suggest counter heroes that the user can choose for the team. Should be executed when the user input contains '/team_counter', 'Suggest counter heroes...'
 ---
 
 # Overview
