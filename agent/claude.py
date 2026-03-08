@@ -5,8 +5,11 @@ import asyncio
 import json
 import logging
 import os
+from pathlib import Path
 
 from agent.base import AgentClient
+
+_SKILLS_DIR = Path(__file__).parent.parent / "skills"
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +38,7 @@ class ClaudeAgentClient(AgentClient):
             "--output-format", "text",
             "--model", self.model,
             "--dangerously-skip-permissions",
+            "--add-dir", str(_SKILLS_DIR),
             "--mcp-config", json.dumps(mcp_config),
         ]
         if system_prompt:
