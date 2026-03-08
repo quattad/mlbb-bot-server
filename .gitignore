@@ -16,3 +16,5 @@ htmlcov/
 
 # Editor artifacts
 .DS_Store
+
+.serena

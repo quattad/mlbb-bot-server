@@ -57,7 +57,6 @@ show_missing = true
 ```
 TELEGRAM_BOT_TOKEN=your-telegram-bot-token
 ANTHROPIC_API_KEY=your-anthropic-api-key
-MLBB_API_TOKEN=your-mlbb-api-token
 WEBHOOK_URL=https://your-domain.com/webhook
 WEBHOOK_PORT=8443
 AGENT_BACKEND=claude
@@ -108,7 +107,6 @@ class TestLoadConfig:
         env_file.write_text(
             "TELEGRAM_BOT_TOKEN=test-token\n"
             "ANTHROPIC_API_KEY=test-key\n"
-            "MLBB_API_TOKEN=test-mlbb\n"
             "WEBHOOK_URL=https://example.com/webhook\n"
             "WEBHOOK_PORT=8443\n"
         )
@@ -119,7 +117,6 @@ class TestLoadConfig:
 
         assert cfg.telegram_bot_token == "test-token"
         assert cfg.anthropic_api_key == "test-key"
-        assert cfg.mlbb_api_token == "test-mlbb"
         assert cfg.webhook_url == "https://example.com/webhook"
         assert cfg.webhook_port == 8443
 
@@ -128,7 +125,6 @@ class TestLoadConfig:
         env_file.write_text(
             "TELEGRAM_BOT_TOKEN=t\n"
             "ANTHROPIC_API_KEY=k\n"
-            "MLBB_API_TOKEN=m\n"
             "WEBHOOK_URL=https://example.com/webhook\n"
         )
         with patch.dict(os.environ, {}, clear=True):
@@ -143,7 +139,6 @@ class TestLoadConfig:
         env_file.write_text(
             "TELEGRAM_BOT_TOKEN=t\n"
             "ANTHROPIC_API_KEY=k\n"
-            "MLBB_API_TOKEN=m\n"
             "WEBHOOK_URL=https://example.com/webhook\n"
         )
         with patch.dict(os.environ, {}, clear=True):
@@ -158,7 +153,6 @@ class TestLoadConfig:
         env_file.write_text(
             "TELEGRAM_BOT_TOKEN=t\n"
             "ANTHROPIC_API_KEY=k\n"
-            "MLBB_API_TOKEN=m\n"
             "WEBHOOK_URL=https://example.com/webhook\n"
             "AGENT_BACKEND=openai\n"
         )
@@ -228,7 +222,6 @@ from dotenv import load_dotenv
 class Config:
     telegram_bot_token: str
     anthropic_api_key: str
-    mlbb_api_token: str
     webhook_url: str
     webhook_port: int = 8443
     agent_backend: str = "claude"
@@ -237,7 +230,11 @@ class Config:
 def load_config(env_path: str = ".env") -> Config:
     load_dotenv(env_path, override=True)
 
-    required = ["TELEGRAM_BOT_TOKEN", "ANTHROPIC_API_KEY", "MLBB_API_TOKEN", "WEBHOOK_URL"]
+    required = [
+        "TELEGRAM_BOT_TOKEN", 
+        "ANTHROPIC_API_KEY",
+        "WEBHOOK_URL",
+    ]
     for var in required:
         if not os.environ.get(var):
             raise ValueError(f"Missing required environment variable: {var}")
@@ -245,7 +242,6 @@ def load_config(env_path: str = ".env") -> Config:
     return Config(
         telegram_bot_token=os.environ["TELEGRAM_BOT_TOKEN"],
         anthropic_api_key=os.environ["ANTHROPIC_API_KEY"],
-        mlbb_api_token=os.environ["MLBB_API_TOKEN"],
         webhook_url=os.environ["WEBHOOK_URL"],
         webhook_port=int(os.environ.get("WEBHOOK_PORT", "8443")),
         agent_backend=os.environ.get("AGENT_BACKEND", "claude"),
@@ -383,18 +379,15 @@ class TestClaudeAgentClient:
     def test_init_stores_config(self):
         client = ClaudeAgentClient(
             anthropic_api_key="test-key",
-            mlbb_api_token="test-mlbb",
             mcp_server_module="mlbb_mcp.server",
         )
         assert client.anthropic_api_key == "test-key"
-        assert client.mlbb_api_token == "test-mlbb"
         assert client.mcp_server_module == "mlbb_mcp.server"
 
     @pytest.mark.asyncio
     async def test_run_calls_query_and_returns_result(self):
         client = ClaudeAgentClient(
             anthropic_api_key="test-key",
-            mlbb_api_token="test-mlbb",
             mcp_server_module="mlbb_mcp.server",
         )
 
@@ -413,7 +406,6 @@ class TestClaudeAgentClient:
     async def test_run_with_system_prompt(self):
         client = ClaudeAgentClient(
             anthropic_api_key="test-key",
-            mlbb_api_token="test-mlbb",
             mcp_server_module="mlbb_mcp.server",
         )
 
@@ -435,7 +427,6 @@ class TestClaudeAgentClient:
     async def test_run_passes_mcp_server_config(self):
         client = ClaudeAgentClient(
             anthropic_api_key="test-key",
-            mlbb_api_token="test-mlbb",
             mcp_server_module="mlbb_mcp.server",
         )
 
@@ -461,7 +452,6 @@ class TestClaudeAgentClient:
     async def test_run_returns_empty_string_when_no_result(self):
         client = ClaudeAgentClient(
             anthropic_api_key="test-key",
-            mlbb_api_token="test-mlbb",
             mcp_server_module="mlbb_mcp.server",
         )
 
@@ -479,7 +469,6 @@ class TestClaudeAgentClient:
     async def test_run_sets_env_with_api_keys(self):
         client = ClaudeAgentClient(
             anthropic_api_key="test-key",
-            mlbb_api_token="test-mlbb",
             mcp_server_module="mlbb_mcp.server",
         )
 
@@ -497,7 +486,6 @@ class TestClaudeAgentClient:
 
         env = captured_options["options"].env
         assert env["ANTHROPIC_API_KEY"] == "test-key"
-        assert env["MLBB_API_TOKEN"] == "test-mlbb"
 ```
 
 **Step 2: Run tests to verify they fail**
@@ -520,14 +508,12 @@ class ClaudeAgentClient(AgentClient):
     def __init__(
         self,
         anthropic_api_key: str,
-        mlbb_api_token: str,
         mcp_server_module: str = "mlbb_mcp.server",
         model: str = "claude-haiku-4-5",
         max_turns: int = 10,
         max_budget_usd: float = 0.05,
     ) -> None:
         self.anthropic_api_key = anthropic_api_key
-        self.mlbb_api_token = mlbb_api_token
         self.mcp_server_module = mcp_server_module
         self.model = model
         self.max_turns = max_turns
@@ -543,7 +529,6 @@ class ClaudeAgentClient(AgentClient):
             system_prompt=system_prompt,
             env={
                 "ANTHROPIC_API_KEY": self.anthropic_api_key,
-                "MLBB_API_TOKEN": self.mlbb_api_token,
             },
             mcp_servers={
                 "mlbb": {
@@ -933,7 +918,6 @@ class TestCreateAgent:
         cfg = Config(
             telegram_bot_token="t",
             anthropic_api_key="k",
-            mlbb_api_token="m",
             webhook_url="https://example.com/webhook",
             agent_backend="claude",
         )
@@ -943,7 +927,6 @@ class TestCreateAgent:
 
         MockClaude.assert_called_once_with(
             anthropic_api_key="k",
-            mlbb_api_token="m",
         )
 
     def test_raises_for_unknown_backend(self):
@@ -952,7 +935,6 @@ class TestCreateAgent:
         cfg = Config(
             telegram_bot_token="t",
             anthropic_api_key="k",
-            mlbb_api_token="m",
             webhook_url="https://example.com/webhook",
             agent_backend="unknown",
         )
@@ -968,7 +950,6 @@ class TestCreateApp:
         cfg = Config(
             telegram_bot_token="t",
             anthropic_api_key="k",
-            mlbb_api_token="m",
             webhook_url="https://example.com/webhook",
         )
 
@@ -1024,7 +1005,6 @@ def create_agent(cfg: Config) -> AgentClient:
     if cfg.agent_backend == "claude":
         return ClaudeAgentClient(
             anthropic_api_key=cfg.anthropic_api_key,
-            mlbb_api_token=cfg.mlbb_api_token,
         )
     raise ValueError(f"Unknown agent backend: {cfg.agent_backend}")
 
@@ -1073,7 +1053,6 @@ class TestMain:
         mock_cfg = Config(
             telegram_bot_token="t",
             anthropic_api_key="k",
-            mlbb_api_token="m",
             webhook_url="https://example.com/webhook",
             webhook_port=9999,
         )

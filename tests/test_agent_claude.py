@@ -1,6 +1,7 @@
 # tests/test_agent_claude.py
+import json
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, AsyncMock
 from agent.claude import ClaudeAgentClient
 from agent.base import AgentClient
 
@@ -10,137 +11,95 @@ class TestClaudeAgentClient:
         assert issubclass(ClaudeAgentClient, AgentClient)
 
     def test_init_stores_config(self):
-        client = ClaudeAgentClient(
-            anthropic_api_key="test-key",
-            mlbb_api_token="test-mlbb",
-            mcp_server_module="mlbb_mcp.server",
-        )
-        assert client.anthropic_api_key == "test-key"
-        assert client.mlbb_api_token == "test-mlbb"
+        client = ClaudeAgentClient(mcp_server_module="mlbb_mcp.server")
         assert client.mcp_server_module == "mlbb_mcp.server"
 
-    async def test_run_calls_query_and_returns_result(self):
-        client = ClaudeAgentClient(
-            anthropic_api_key="test-key",
-            mlbb_api_token="test-mlbb",
-            mcp_server_module="mlbb_mcp.server",
-        )
+    async def test_run_calls_claude_and_returns_stdout(self):
+        client = ClaudeAgentClient(mcp_server_module="mlbb_mcp.server")
 
-        mock_result_msg = MagicMock()
-        mock_result_msg.result = "Here are the counter heroes..."
+        mock_proc = AsyncMock()
+        mock_proc.communicate.return_value = (b"Here are the counter heroes...", b"")
 
-        async def fake_query(*args, **kwargs):
-            yield mock_result_msg
-
-        with patch("agent.claude.query", side_effect=fake_query):
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc) as mock_exec:
             result = await client.run("Suggest counters for Lancelot")
 
         assert result == "Here are the counter heroes..."
+        mock_exec.assert_called_once()
 
-    async def test_run_with_system_prompt(self):
-        client = ClaudeAgentClient(
-            anthropic_api_key="test-key",
-            mlbb_api_token="test-mlbb",
-            mcp_server_module="mlbb_mcp.server",
-        )
+    async def test_run_passes_prompt_as_last_arg(self):
+        client = ClaudeAgentClient()
 
-        mock_result_msg = MagicMock()
-        mock_result_msg.result = "formatted response"
+        mock_proc = AsyncMock()
+        mock_proc.communicate.return_value = (b"response", b"")
 
-        captured_options = {}
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc) as mock_exec:
+            await client.run("my prompt")
 
-        async def fake_query(*args, **kwargs):
-            captured_options.update(kwargs)
-            yield mock_result_msg
+        args = mock_exec.call_args[0]
+        assert args[-1] == "my prompt"
 
-        with patch("agent.claude.query", side_effect=fake_query):
+    async def test_run_includes_system_prompt_flag(self):
+        client = ClaudeAgentClient()
+
+        mock_proc = AsyncMock()
+        mock_proc.communicate.return_value = (b"response", b"")
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc) as mock_exec:
             await client.run("test", system_prompt="be concise")
 
-        assert captured_options["options"].system_prompt == "be concise"
+        args = mock_exec.call_args[0]
+        assert "--system-prompt" in args
+        assert "be concise" in args
 
-    async def test_run_passes_mcp_server_config(self):
-        client = ClaudeAgentClient(
-            anthropic_api_key="test-key",
-            mlbb_api_token="test-mlbb",
-            mcp_server_module="mlbb_mcp.server",
-        )
+    async def test_run_passes_mcp_config_with_python3(self):
+        client = ClaudeAgentClient(mcp_server_module="mlbb_mcp.server")
 
-        mock_result_msg = MagicMock()
-        mock_result_msg.result = "response"
+        mock_proc = AsyncMock()
+        mock_proc.communicate.return_value = (b"response", b"")
 
-        captured_options = {}
-
-        async def fake_query(*args, **kwargs):
-            captured_options.update(kwargs)
-            yield mock_result_msg
-
-        with patch("agent.claude.query", side_effect=fake_query):
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc) as mock_exec:
             await client.run("test")
 
-        mcp = captured_options["options"].mcp_servers
-        assert "mlbb" in mcp
-        assert mcp["mlbb"]["command"] == "python"
-        assert "-m" in mcp["mlbb"]["args"]
-        assert "mlbb_mcp.server" in mcp["mlbb"]["args"]
+        args = mock_exec.call_args[0]
+        mcp_idx = list(args).index("--mcp-config")
+        mcp_config = json.loads(args[mcp_idx + 1])
+        assert "mlbb" in mcp_config["mcpServers"]
+        assert mcp_config["mcpServers"]["mlbb"]["command"] == "python3"
+        assert "-m" in mcp_config["mcpServers"]["mlbb"]["args"]
+        assert "mlbb_mcp.server" in mcp_config["mcpServers"]["mlbb"]["args"]
 
-    async def test_run_returns_empty_string_when_no_result(self):
-        client = ClaudeAgentClient(
-            anthropic_api_key="test-key",
-            mlbb_api_token="test-mlbb",
-            mcp_server_module="mlbb_mcp.server",
-        )
+    async def test_run_returns_empty_string_when_no_output(self):
+        client = ClaudeAgentClient()
 
-        mock_other_msg = MagicMock(spec=[])  # no .result attribute
+        mock_proc = AsyncMock()
+        mock_proc.communicate.return_value = (b"", b"")
 
-        async def fake_query(*args, **kwargs):
-            yield mock_other_msg
-
-        with patch("agent.claude.query", side_effect=fake_query):
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
             result = await client.run("test")
 
         assert result == ""
 
-    async def test_run_sets_permission_bypass(self):
-        client = ClaudeAgentClient(
-            anthropic_api_key="test-key",
-            mlbb_api_token="test-mlbb",
-            mcp_server_module="mlbb_mcp.server",
-        )
+    async def test_run_strips_claudecode_from_env(self):
+        client = ClaudeAgentClient()
 
-        mock_result_msg = MagicMock()
-        mock_result_msg.result = "ok"
-        captured_options = {}
+        mock_proc = AsyncMock()
+        mock_proc.communicate.return_value = (b"ok", b"")
 
-        async def fake_query(*args, **kwargs):
-            captured_options.update(kwargs)
-            yield mock_result_msg
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc) as mock_exec:
+            with patch.dict("os.environ", {"CLAUDECODE": "1"}):
+                await client.run("test")
 
-        with patch("agent.claude.query", side_effect=fake_query):
+        kwargs = mock_exec.call_args[1]
+        assert "CLAUDECODE" not in kwargs["env"]
+
+    async def test_run_uses_dangerously_skip_permissions(self):
+        client = ClaudeAgentClient()
+
+        mock_proc = AsyncMock()
+        mock_proc.communicate.return_value = (b"ok", b"")
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc) as mock_exec:
             await client.run("test")
 
-        opts = captured_options["options"]
-        assert opts.permission_mode == "bypassPermissions"
-        assert opts.allow_dangerously_skip_permissions is True
-
-    async def test_run_sets_env_with_api_keys(self):
-        client = ClaudeAgentClient(
-            anthropic_api_key="test-key",
-            mlbb_api_token="test-mlbb",
-            mcp_server_module="mlbb_mcp.server",
-        )
-
-        mock_result_msg = MagicMock()
-        mock_result_msg.result = "ok"
-
-        captured_options = {}
-
-        async def fake_query(*args, **kwargs):
-            captured_options.update(kwargs)
-            yield mock_result_msg
-
-        with patch("agent.claude.query", side_effect=fake_query):
-            await client.run("test")
-
-        env = captured_options["options"].env
-        assert env["ANTHROPIC_API_KEY"] == "test-key"
-        assert env["MLBB_API_TOKEN"] == "test-mlbb"
+        args = mock_exec.call_args[0]
+        assert "--dangerously-skip-permissions" in args

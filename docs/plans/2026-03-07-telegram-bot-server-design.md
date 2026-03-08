@@ -164,7 +164,6 @@ Claude uses MCP tools as needed and outputs a ready-to-send Telegram HTML messag
 |----------|-------------|----------|
 | `TELEGRAM_BOT_TOKEN` | Telegram bot API token | Yes |
 | `ANTHROPIC_API_KEY` | Anthropic API key for Claude | Yes |
-| `MLBB_API_TOKEN` | Token for MLBB GMS API (passed to MCP server) | Yes |
 | `WEBHOOK_URL` | Public HTTPS URL for webhook | Yes |
 | `WEBHOOK_PORT` | Port for webhook server | Yes (default: 8443) |
 | `AGENT_BACKEND` | Agent implementation to use | No (default: `claude`) |

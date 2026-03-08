@@ -8,9 +8,6 @@ class TestCreateAgent:
     def test_creates_claude_agent_for_claude_backend(self):
         cfg = Config(
             telegram_bot_token="t",
-            anthropic_api_key="k",
-            mlbb_api_token="m",
-            webhook_url="https://example.com/webhook",
             agent_backend="claude",
         )
 
@@ -18,17 +15,11 @@ class TestCreateAgent:
             from bot.main import create_agent
             agent = create_agent(cfg)
 
-        MockClaude.assert_called_once_with(
-            anthropic_api_key="k",
-            mlbb_api_token="m",
-        )
+        MockClaude.assert_called_once_with()
 
     def test_raises_for_unknown_backend(self):
         cfg = Config(
             telegram_bot_token="t",
-            anthropic_api_key="k",
-            mlbb_api_token="m",
-            webhook_url="https://example.com/webhook",
             agent_backend="unknown",
         )
 
@@ -39,12 +30,7 @@ class TestCreateAgent:
 
 class TestCreateApp:
     def test_creates_application_with_handlers(self):
-        cfg = Config(
-            telegram_bot_token="t",
-            anthropic_api_key="k",
-            mlbb_api_token="m",
-            webhook_url="https://example.com/webhook",
-        )
+        cfg = Config(telegram_bot_token="t")
 
         with (
             patch("bot.main.create_agent") as mock_create_agent,
@@ -73,14 +59,8 @@ class TestCreateApp:
 
 
 class TestMain:
-    def test_main_starts_webhook(self):
-        mock_cfg = Config(
-            telegram_bot_token="t",
-            anthropic_api_key="k",
-            mlbb_api_token="m",
-            webhook_url="https://example.com/webhook",
-            webhook_port=9999,
-        )
+    def test_main_starts_polling(self):
+        mock_cfg = Config(telegram_bot_token="t")
 
         with (
             patch("bot.main.load_config", return_value=mock_cfg),
@@ -92,8 +72,4 @@ class TestMain:
             from bot.main import main
             main()
 
-            mock_app.run_webhook.assert_called_once_with(
-                listen="0.0.0.0",
-                port=9999,
-                webhook_url="https://example.com/webhook",
-            )
+            mock_app.run_polling.assert_called_once_with()

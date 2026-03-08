@@ -8,43 +8,15 @@ from config import load_config, COMMANDS
 class TestLoadConfig:
     def test_loads_required_env_vars(self, tmp_path):
         env_file = tmp_path / ".env"
-        env_file.write_text(
-            "TELEGRAM_BOT_TOKEN=test-token\n"
-            "ANTHROPIC_API_KEY=test-key\n"
-            "MLBB_API_TOKEN=test-mlbb\n"
-            "WEBHOOK_URL=https://example.com/webhook\n"
-            "WEBHOOK_PORT=8443\n"
-        )
+        env_file.write_text("TELEGRAM_BOT_TOKEN=test-token\n")
         with patch.dict(os.environ, {}, clear=True):
             cfg = load_config(str(env_file))
 
         assert cfg.telegram_bot_token == "test-token"
-        assert cfg.anthropic_api_key == "test-key"
-        assert cfg.mlbb_api_token == "test-mlbb"
-        assert cfg.webhook_url == "https://example.com/webhook"
-        assert cfg.webhook_port == 8443
-
-    def test_default_webhook_port(self, tmp_path):
-        env_file = tmp_path / ".env"
-        env_file.write_text(
-            "TELEGRAM_BOT_TOKEN=t\n"
-            "ANTHROPIC_API_KEY=k\n"
-            "MLBB_API_TOKEN=m\n"
-            "WEBHOOK_URL=https://example.com/webhook\n"
-        )
-        with patch.dict(os.environ, {}, clear=True):
-            cfg = load_config(str(env_file))
-
-        assert cfg.webhook_port == 8443
 
     def test_default_agent_backend(self, tmp_path):
         env_file = tmp_path / ".env"
-        env_file.write_text(
-            "TELEGRAM_BOT_TOKEN=t\n"
-            "ANTHROPIC_API_KEY=k\n"
-            "MLBB_API_TOKEN=m\n"
-            "WEBHOOK_URL=https://example.com/webhook\n"
-        )
+        env_file.write_text("TELEGRAM_BOT_TOKEN=t\n")
         with patch.dict(os.environ, {}, clear=True):
             cfg = load_config(str(env_file))
 
@@ -54,9 +26,6 @@ class TestLoadConfig:
         env_file = tmp_path / ".env"
         env_file.write_text(
             "TELEGRAM_BOT_TOKEN=t\n"
-            "ANTHROPIC_API_KEY=k\n"
-            "MLBB_API_TOKEN=m\n"
-            "WEBHOOK_URL=https://example.com/webhook\n"
             "AGENT_BACKEND=openai\n"
         )
         with patch.dict(os.environ, {}, clear=True):
@@ -66,34 +35,16 @@ class TestLoadConfig:
 
     def test_missing_required_var_raises(self, tmp_path):
         env_file = tmp_path / ".env"
-        env_file.write_text("TELEGRAM_BOT_TOKEN=t\n")
+        env_file.write_text("")
         with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="ANTHROPIC_API_KEY"):
+            with pytest.raises(ValueError, match="TELEGRAM_BOT_TOKEN"):
                 load_config(str(env_file))
 
     def test_empty_required_var_raises(self, tmp_path):
         env_file = tmp_path / ".env"
-        env_file.write_text(
-            "TELEGRAM_BOT_TOKEN=t\n"
-            "ANTHROPIC_API_KEY=   \n"
-            "MLBB_API_TOKEN=m\n"
-            "WEBHOOK_URL=https://example.com/webhook\n"
-        )
+        env_file.write_text("TELEGRAM_BOT_TOKEN=   \n")
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="set but empty"):
-                load_config(str(env_file))
-
-    def test_invalid_webhook_port_raises(self, tmp_path):
-        env_file = tmp_path / ".env"
-        env_file.write_text(
-            "TELEGRAM_BOT_TOKEN=t\n"
-            "ANTHROPIC_API_KEY=k\n"
-            "MLBB_API_TOKEN=m\n"
-            "WEBHOOK_URL=https://example.com/webhook\n"
-            "WEBHOOK_PORT=abc\n"
-        )
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="WEBHOOK_PORT"):
                 load_config(str(env_file))
 
 

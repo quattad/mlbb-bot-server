@@ -15,10 +15,7 @@ logger = logging.getLogger(__name__)
 
 def create_agent(cfg: Config) -> AgentClient:
     if cfg.agent_backend == "claude":
-        return ClaudeAgentClient(
-            anthropic_api_key=cfg.anthropic_api_key,
-            mlbb_api_token=cfg.mlbb_api_token,
-        )
+        return ClaudeAgentClient()
     raise ValueError(f"Unknown agent backend: {cfg.agent_backend}")
 
 
@@ -37,12 +34,8 @@ def main() -> None:
     cfg = load_config()
     app = create_app(cfg)
 
-    logger.info("Starting webhook on %s:%d", cfg.webhook_url, cfg.webhook_port)
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=cfg.webhook_port,
-        webhook_url=cfg.webhook_url,
-    )
+    logger.info("Starting polling")
+    app.run_polling()
 
 
 if __name__ == "__main__":  # pragma: no cover
