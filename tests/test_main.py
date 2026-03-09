@@ -36,7 +36,6 @@ class TestCreateApp:
             patch("bot.main.create_agent") as mock_create_agent,
             patch("bot.main.Application") as MockApp,
             patch("bot.main.build_handlers") as mock_build,
-            patch("bot.main.CommandHandler") as MockCmdHandler,
         ):
             mock_agent = MagicMock()
             mock_create_agent.return_value = mock_agent
@@ -46,8 +45,8 @@ class TestCreateApp:
             mock_builder.token.return_value = mock_builder
             mock_builder.build.return_value = MagicMock()
 
-            mock_handler_fn = MagicMock()
-            mock_build.return_value = [("team_counter", mock_handler_fn)]
+            mock_handler = MagicMock()
+            mock_build.return_value = [mock_handler]
 
             from bot.main import create_app
             app = create_app(cfg)
@@ -55,7 +54,7 @@ class TestCreateApp:
             MockApp.builder.assert_called_once()
             mock_builder.token.assert_called_once_with("t")
             mock_builder.build.assert_called_once()
-            app.add_handler.assert_called_once()
+            app.add_handler.assert_called_once_with(mock_handler)
 
 
 class TestMain:

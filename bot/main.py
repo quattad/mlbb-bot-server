@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from telegram.ext import Application, CommandHandler
+from telegram.ext import Application
 
 from agent.base import AgentClient
 from agent.claude import ClaudeAgentClient
@@ -23,8 +23,8 @@ def create_app(cfg: Config) -> Application:
     agent = create_agent(cfg)
     app = Application.builder().token(cfg.telegram_bot_token).build()
 
-    for name, handler_fn in build_handlers(agent, COMMANDS):
-        app.add_handler(CommandHandler(name, handler_fn))
+    for handler in build_handlers(agent, COMMANDS):
+        app.add_handler(handler)
 
     return app
 
