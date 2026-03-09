@@ -35,7 +35,7 @@ mlbb_mcp server
 ## Scope
 
 **In scope (v1):**
-- `/team_counter` command — user provides enemy hero lineup, bot suggests counter picks
+- `/suggest_heroes` command — user provides enemy hero lineup, bot suggests counter picks
 - Webhook mode for receiving Telegram updates
 - Rich Telegram HTML output (formatted by Claude via skill prompt instructions)
 - Pluggable agent backend (abstract interface + Claude implementation)
@@ -60,7 +60,7 @@ mlbb_bot_server/
 │   ├── base.py              # Abstract AgentClient interface
 │   └── claude.py            # Claude Agent SDK implementation
 ├── skills/
-│   └── team_counter.md  # Prompt template with formatting instructions
+│   └── suggest_heroes.md  # Prompt template with formatting instructions
 ├── config.py                # Settings: load .env, command-to-skill mapping
 ├── pyproject.toml
 ├── .env.example
@@ -76,9 +76,9 @@ mlbb_bot_server/
 
 ## Command Flow
 
-1. User sends `/team_counter Lancelot, Pharsa, Tigreal, Bruno, Rafaela`
+1. User sends `/suggest_heroes Lancelot, Pharsa, Tigreal, Bruno, Rafaela`
 2. `handlers.py` parses the command, extracts hero names as a comma-separated string
-3. `handlers.py` loads `skills/team-counter/SKILL.md`, interpolates `{heroes}` placeholder
+3. `handlers.py` loads `skills/suggest-heroes/SKILL.md`, interpolates `{heroes}` placeholder
 4. `agent/client.py` calls the configured agent with the interpolated prompt
 5. Claude agent autonomously calls `get_hero_list` / `get_hero_detail` via MCP as needed
 6. Claude formats the response as Telegram HTML (as instructed in the skill template)
@@ -92,8 +92,8 @@ Loads environment variables from `.env` via `python-dotenv`. Defines the command
 
 ```python
 COMMANDS = {
-    "/team_counter": {
-        "skill_file": "skills/team-counter/SKILL.md",
+    "/suggest_heroes": {
+        "skill_file": "skills/suggest-heroes/SKILL.md",
         "description": "Suggest counter heroes for an enemy lineup",
         "args": ["heroes"],
     }
@@ -127,7 +127,7 @@ Claude Agent SDK implementation of `AgentClient`:
 - `max_budget_usd=0.05` per request as a safety cap
 - Model: `claude-haiku-4-5` (fast and cost-effective for bot responses)
 
-### `skills/team-counter/SKILL.md`
+### `skills/suggest-heroes/SKILL.md`
 
 Prompt template file containing:
 - Task instructions (analyze lineup, suggest counters)
@@ -138,7 +138,7 @@ Claude uses MCP tools as needed and outputs a ready-to-send Telegram HTML messag
 
 ### `bot/handlers.py`
 
-- Registers `/team_counter` command handler
+- Registers `/suggest_heroes` command handler
 - Parses hero names from command arguments
 - Loads and interpolates the skill template
 - Calls the agent, sends result to user
