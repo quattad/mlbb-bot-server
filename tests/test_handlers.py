@@ -27,11 +27,11 @@ class FakeAgent(AgentClient):
 class TestTeamCounterHandler:
     async def test_sends_agent_response_as_html(self, tmp_path):
         skill_file = tmp_path / "team_counter.md"
-        skill_file.write_text("Counter: {heroes}")
+        skill_file.write_text("{user_heroes} vs {enemy_heroes}")
 
         agent = FakeAgent(response="<b>Pick Fanny</b>")
         handler_fn = team_counter_handler(agent, str(skill_file))
-        update, context = _make_update_and_context(["Lancelot,", "Pharsa"])
+        update, context = _make_update_and_context(["Lancelot", "VS", "Pharsa"])
 
         await handler_fn(update, context)
 
@@ -39,11 +39,11 @@ class TestTeamCounterHandler:
 
     async def test_passes_heroes_to_skill_template(self, tmp_path):
         skill_file = tmp_path / "team_counter.md"
-        skill_file.write_text("Analyze: {heroes}")
+        skill_file.write_text("User: {user_heroes} Enemy: {enemy_heroes}")
 
         agent = FakeAgent()
         handler_fn = team_counter_handler(agent, str(skill_file))
-        update, context = _make_update_and_context(["Lancelot,", "Pharsa"])
+        update, context = _make_update_and_context(["Lancelot,", "Alice", "VS", "Pharsa,", "Fanny"])
 
         await handler_fn(update, context)
 
@@ -52,7 +52,7 @@ class TestTeamCounterHandler:
 
     async def test_missing_args_sends_usage(self, tmp_path):
         skill_file = tmp_path / "team_counter.md"
-        skill_file.write_text("{heroes}")
+        skill_file.write_text("{user_heroes} {enemy_heroes}")
 
         agent = FakeAgent()
         handler_fn = team_counter_handler(agent, str(skill_file))
@@ -63,14 +63,72 @@ class TestTeamCounterHandler:
         reply_text = update.effective_message.reply_html.call_args[0][0]
         assert "usage" in reply_text.lower()
 
-    async def test_multi_word_hero_names_are_preserved(self, tmp_path):
+    async def test_missing_separator_returns_format_error(self, tmp_path):
         skill_file = tmp_path / "team_counter.md"
-        skill_file.write_text("Analyze: {heroes}")
+        skill_file.write_text("{user_heroes} {enemy_heroes}")
 
         agent = FakeAgent()
         handler_fn = team_counter_handler(agent, str(skill_file))
-        # Args as Telegram would parse "/team_counter Sun Wukong, Lancelot"
-        update, context = _make_update_and_context(["Sun", "Wukong,", "Lancelot"])
+        update, context = _make_update_and_context(["Lancelot,", "Pharsa"])
+
+        await handler_fn(update, context)
+
+        reply_text = update.effective_message.reply_html.call_args[0][0]
+        assert "exactly two lineups" in reply_text.lower()
+
+    async def test_too_many_separators_returns_format_error(self, tmp_path):
+        skill_file = tmp_path / "team_counter.md"
+        skill_file.write_text("{user_heroes} {enemy_heroes}")
+
+        agent = FakeAgent()
+        handler_fn = team_counter_handler(agent, str(skill_file))
+        update, context = _make_update_and_context(["Lancelot", "VS", "Pharsa", "VS", "Fanny"])
+
+        await handler_fn(update, context)
+
+        reply_text = update.effective_message.reply_html.call_args[0][0]
+        assert "exactly two lineups" in reply_text.lower()
+
+    async def test_user_team_too_many_heroes_returns_error(self, tmp_path):
+        skill_file = tmp_path / "team_counter.md"
+        skill_file.write_text("{user_heroes} {enemy_heroes}")
+
+        agent = FakeAgent()
+        handler_fn = team_counter_handler(agent, str(skill_file))
+        # 6 heroes in user team, 1 in enemy
+        update, context = _make_update_and_context(
+            ["A,", "B,", "C,", "D,", "E,", "F", "VS", "Pharsa"]
+        )
+
+        await handler_fn(update, context)
+
+        reply_text = update.effective_message.reply_html.call_args[0][0]
+        assert "user team" in reply_text.lower()
+
+    async def test_enemy_team_empty_returns_error(self, tmp_path):
+        skill_file = tmp_path / "team_counter.md"
+        skill_file.write_text("{user_heroes} {enemy_heroes}")
+
+        agent = FakeAgent()
+        handler_fn = team_counter_handler(agent, str(skill_file))
+        # valid user team, empty enemy team
+        update, context = _make_update_and_context(["Lancelot", "VS"])
+
+        await handler_fn(update, context)
+
+        reply_text = update.effective_message.reply_html.call_args[0][0]
+        assert "enemy team" in reply_text.lower()
+
+    async def test_multi_word_hero_names_are_preserved(self, tmp_path):
+        skill_file = tmp_path / "team_counter.md"
+        skill_file.write_text("User: {user_heroes} Enemy: {enemy_heroes}")
+
+        agent = FakeAgent()
+        handler_fn = team_counter_handler(agent, str(skill_file))
+        # Args as Telegram would parse "/team_counter Sun Wukong, Alice | Fanny, Lancelot"
+        update, context = _make_update_and_context(
+            ["Sun", "Wukong,", "Alice", "VS", "Fanny,", "Lancelot"]
+        )
 
         await handler_fn(update, context)
 
@@ -79,7 +137,7 @@ class TestTeamCounterHandler:
 
     async def test_agent_error_sends_error_message(self, tmp_path):
         skill_file = tmp_path / "team_counter.md"
-        skill_file.write_text("{heroes}")
+        skill_file.write_text("{user_heroes} {enemy_heroes}")
 
         class FailingAgent(AgentClient):
             async def run(self, prompt: str, system_prompt: str | None = None) -> str:
@@ -87,7 +145,7 @@ class TestTeamCounterHandler:
 
         agent = FailingAgent()
         handler_fn = team_counter_handler(agent, str(skill_file))
-        update, context = _make_update_and_context(["Lancelot"])
+        update, context = _make_update_and_context(["Lancelot", "VS", "Fanny"])
 
         await handler_fn(update, context)
 
@@ -98,7 +156,7 @@ class TestTeamCounterHandler:
 class TestBuildHandlers:
     def test_returns_list_of_command_handler_tuples(self, tmp_path):
         skill_file = tmp_path / "team_counter.md"
-        skill_file.write_text("{heroes}")
+        skill_file.write_text("{user_heroes} {enemy_heroes}")
 
         agent = FakeAgent()
         commands = {

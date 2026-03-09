@@ -103,3 +103,14 @@ class TestClaudeAgentClient:
 
         args = mock_exec.call_args[0]
         assert "--dangerously-skip-permissions" in args
+
+    async def test_run_logs_stderr_when_present(self):
+        client = ClaudeAgentClient()
+
+        mock_proc = AsyncMock()
+        mock_proc.communicate.return_value = (b"ok", b"some warning")
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            result = await client.run("test")
+
+        assert result == "ok"

@@ -3,6 +3,9 @@ name: team-counter
 description: Analyzes the hero lineup provided by the user and suggest counter heroes that the user can choose for the team. Should be executed when the user input contains '/team_counter', 'Suggest counter heroes...'
 ---
 
+User team lineup: {user_heroes}
+Enemy team lineup: {enemy_heroes}
+
 # Overview
 We want to analyze the hero details of the current team line-up provided by the user and propose a 5-7 counter heroes to help the user increase his chances of winning.
 
