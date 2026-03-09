@@ -86,6 +86,8 @@ def suggest_heroes_enemy_team(
 
         user_lineup = context.user_data["user_lineup"]
 
+        await update.effective_message.reply_html("Generating suggestions...")
+
         try:
             prompt = load_skill(
                 skill_path,

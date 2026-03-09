@@ -128,7 +128,10 @@ class TestSuggestHeroesEnemyTeam:
         result = await handler(update, context)
 
         assert result == ConversationHandler.END
-        update.effective_message.reply_html.assert_called_once_with("<b>Pick Fanny</b>")
+        calls = update.effective_message.reply_html.call_args_list
+        assert len(calls) == 2
+        assert calls[0][0][0] == "Generating suggestions..."
+        assert calls[1][0][0] == "<b>Pick Fanny</b>"
         assert "Zilong" in agent.last_prompt
         assert "Fanny" in agent.last_prompt
 
@@ -147,6 +150,9 @@ class TestSuggestHeroesEnemyTeam:
         result = await handler(update, context)
 
         assert result == ConversationHandler.END
+        calls = update.effective_message.reply_html.call_args_list
+        assert len(calls) == 2
+        assert calls[0][0][0] == "Generating suggestions..."
         assert "None" in agent.last_prompt
 
     async def test_skip_case_insensitive(self, tmp_path):
@@ -164,6 +170,9 @@ class TestSuggestHeroesEnemyTeam:
         result = await handler(update, context)
 
         assert result == ConversationHandler.END
+        calls = update.effective_message.reply_html.call_args_list
+        assert len(calls) == 2
+        assert calls[0][0][0] == "Generating suggestions..."
         assert "None" in agent.last_prompt
 
     async def test_invalid_lineup_reprompts(self, tmp_path):
@@ -202,8 +211,10 @@ class TestSuggestHeroesEnemyTeam:
         result = await handler(update, context)
 
         assert result == ConversationHandler.END
-        reply_text = update.effective_message.reply_html.call_args[0][0]
-        assert "unavailable" in reply_text.lower()
+        calls = update.effective_message.reply_html.call_args_list
+        assert len(calls) == 2
+        assert calls[0][0][0] == "Generating suggestions..."
+        assert "unavailable" in calls[1][0][0].lower()
 
 
 class TestSuggestHeroesTimeout:
