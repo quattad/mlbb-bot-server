@@ -2,12 +2,17 @@
 from __future__ import annotations
 
 import logging
-import re
 from collections.abc import Callable, Coroutine
 from typing import Any
 
 from telegram import Update
-from telegram.ext import ContextTypes
+from telegram.ext import (
+    CommandHandler,
+    ContextTypes,
+    ConversationHandler,
+    MessageHandler,
+    filters,
+)
 
 from agent.base import AgentClient
 from bot.skills import load_skill
@@ -18,82 +23,136 @@ HandlerFunc = Callable[
     [Update, ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]
 ]
 
-_USAGE = (
-    "Usage: <code>/team_counter &lt;user_team&gt; VS &lt;enemy_team&gt;</code>\n"
-    "Each lineup: 1\u20135 heroes, comma-separated.\n"
-    "Example: <code>/team_counter Zilong, Yu Zhong VS Fanny, Lancelot</code>"
-)
+USER_TEAM = 0
+ENEMY_TEAM = 1
 
-_VS_RE = re.compile(r"\bvs\b", re.IGNORECASE)
+_TIMEOUT_SECONDS = 300  # 5 minutes
 
 
-def team_counter_handler(
+def _parse_lineup(text: str) -> list[str] | None:
+    heroes = [h.strip() for h in text.split(",") if h.strip()]
+    if not (1 <= len(heroes) <= 5):
+        return None
+    return heroes
+
+
+async def suggest_heroes_start(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    await update.effective_message.reply_html(
+        "Please enter your team lineup (1\u20135 heroes, comma-separated).\n"
+        "Example: <code>Zilong, Yu Zhong, Ruby</code>"
+    )
+    return USER_TEAM
+
+
+async def suggest_heroes_user_team(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    lineup = _parse_lineup(update.message.text)
+    if lineup is None:
+        await update.effective_message.reply_html(
+            "Invalid lineup. Please enter 1\u20135 heroes, comma-separated."
+        )
+        return USER_TEAM
+
+    context.user_data["user_lineup"] = lineup
+    await update.effective_message.reply_html(
+        "Got it! Now enter the enemy team lineup (1\u20135 heroes, comma-separated), "
+        "or type <b>skip</b> to get suggestions based on your team only."
+    )
+    return ENEMY_TEAM
+
+
+def suggest_heroes_enemy_team(
     agent: AgentClient, skill_path: str
 ) -> HandlerFunc:
     async def handler(
         update: Update, context: ContextTypes.DEFAULT_TYPE
-    ) -> None:
-        args = context.args or []
-        if not args:
-            await update.effective_message.reply_html(_USAGE)
-            return
+    ) -> int:
+        text = update.message.text.strip()
 
-        raw = " ".join(args)
-        parts = _VS_RE.split(raw)
+        if text.lower() == "skip":
+            enemy_heroes = "None"
+        else:
+            lineup = _parse_lineup(text)
+            if lineup is None:
+                await update.effective_message.reply_html(
+                    "Invalid lineup. Please enter 1\u20135 heroes, comma-separated, "
+                    "or type <b>skip</b>."
+                )
+                return ENEMY_TEAM
+            enemy_heroes = ", ".join(lineup)
 
-        if len(parts) != 2:
-            await update.effective_message.reply_html(
-                "Invalid format: provide exactly two lineups separated by <code>VS</code>.\n\n"
-                + _USAGE
-            )
-            return
-
-        user_lineup = [h.strip() for h in parts[0].split(",") if h.strip()]
-        enemy_lineup = [h.strip() for h in parts[1].split(",") if h.strip()]
-
-        errors: list[str] = []
-        if not (1 <= len(user_lineup) <= 5):
-            errors.append(f"User team must have 1\u20135 heroes (got {len(user_lineup)})")
-        if not (1 <= len(enemy_lineup) <= 5):
-            errors.append(f"Enemy team must have 1\u20135 heroes (got {len(enemy_lineup)})")
-
-        if errors:
-            await update.effective_message.reply_html(
-                "\n".join(f"\u2022 {e}" for e in errors) + "\n\n" + _USAGE
-            )
-            return
+        user_lineup = context.user_data["user_lineup"]
 
         try:
             prompt = load_skill(
                 skill_path,
                 user_heroes=", ".join(user_lineup),
-                enemy_heroes=", ".join(enemy_lineup),
+                enemy_heroes=enemy_heroes,
             )
             result = await agent.run(prompt)
             await update.effective_message.reply_html(result)
         except Exception:
-            logger.exception("Agent error in /team_counter")
+            logger.exception("Agent error in /suggest_heroes")
             await update.effective_message.reply_html(
-                "Sorry, the service is temporarily unavailable. Please try again later."
+                "Sorry, the service is temporarily unavailable. "
+                "Please try again later."
             )
+
+        return ConversationHandler.END
 
     return handler
 
 
+async def suggest_heroes_timeout(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    await update.effective_message.reply_html(
+        "Session expired. Send /suggest_heroes to start again."
+    )
+    return ConversationHandler.END
+
+
 def build_handlers(
     agent: AgentClient, commands: dict[str, dict]
-) -> list[tuple[str, HandlerFunc]]:
-    handler_map: dict[str, Callable[..., HandlerFunc]] = {
-        "/team_counter": team_counter_handler,
+) -> list[ConversationHandler]:
+    handler_builders: dict[str, Callable] = {
+        "/suggest_heroes": lambda cmd_config: ConversationHandler(
+            entry_points=[CommandHandler("suggest_heroes", suggest_heroes_start)],
+            states={
+                USER_TEAM: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        suggest_heroes_user_team,
+                    ),
+                ],
+                ENEMY_TEAM: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        suggest_heroes_enemy_team(agent, cmd_config["skill_file"]),
+                    ),
+                ],
+                ConversationHandler.TIMEOUT: [
+                    MessageHandler(
+                        filters.ALL,
+                        suggest_heroes_timeout,
+                    ),
+                ],
+            },
+            fallbacks=[CommandHandler("suggest_heroes", suggest_heroes_start)],
+            conversation_timeout=_TIMEOUT_SECONDS,
+            per_user=True,
+            per_chat=True,
+        ),
     }
 
     handlers = []
     for cmd_name, cmd_config in commands.items():
-        factory = handler_map.get(cmd_name)
-        if factory is None:
+        builder = handler_builders.get(cmd_name)
+        if builder is None:
             continue
-        name = cmd_name.lstrip("/")
-        handler_fn = factory(agent, cmd_config["skill_file"])
-        handlers.append((name, handler_fn))
+        handlers.append(builder(cmd_config))
 
     return handlers
