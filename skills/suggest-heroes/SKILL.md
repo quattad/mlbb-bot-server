@@ -25,13 +25,22 @@ We want to analyze the hero details of the current team line-up provided by the 
   - Focus on filling missing roles (tank, marksman, mage, assassin, support/roam) and complementing the team composition.
 
 **Summarizing Suggestions**
-- You MUST format your response using EXACTLY the template below. Do NOT add any extra text, preamble, or markdown formatting outside of this template.
+- You MUST format your response using EXACTLY the template below, unless reporting a hero lookup failure. Do NOT add any extra text, preamble, or markdown formatting outside of this template.
 - Suggest 3-5 heroes.
 - Keep each "Why hero was suggested" entry to a maximum of 2 sentences.
 - If no enemy team lineup was provided (enemy_heroes is "None"), set Counters to "-".
+- For "Good teammates", list only user-team heroes that have meaningful synergy with the suggested hero.
+- The following block MUST be repeated for each suggested hero (3-5 total):
 
 Your suggested heroes are as follows:
 1. <hero_name>
 - Why hero was suggested: <maximum 2 sentence summary of why the hero was chosen>
 - Good teammates: <heroes on the user's team that would work well with this hero, comma-separated>
 - Counters: <heroes on the enemy team that the hero counters, or "-" if no enemy team was provided>
+
+2. <hero_name>
+- Why hero was suggested: <maximum 2 sentence summary of why the hero was chosen>
+- Good teammates: <heroes on the user's team that would work well with this hero, comma-separated>
+- Counters: <heroes on the enemy team that the hero counters, or "-" if no enemy team was provided>
+
+(continue for remaining heroes)
