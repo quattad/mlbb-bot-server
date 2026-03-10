@@ -29,7 +29,7 @@ We want to analyze the hero details of the current team line-up provided by the 
 - Suggest 3-5 heroes.
 - Keep each "Why hero was suggested" entry to a maximum of 2 sentences.
 - If no enemy team lineup was provided (enemy_heroes is "None"), set Counters to "-".
-- For "Good teammates", list only user-team heroes that have meaningful synergy with the suggested hero.
+- For "Good teammates", list only user-team heroes that have meaningful synergy with the suggested hero, or "-" if none apply.
 - The following block MUST be repeated for each suggested hero (3-5 total):
 
 Your suggested heroes are as follows:
